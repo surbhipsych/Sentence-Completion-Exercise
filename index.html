@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentence Completion Exercise</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background-color: #0d0d0d; color: white; overflow-x: hidden; }
+
+    .navbar { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; background-color: #1a1a1a; }
+    .navbar h1 { font-size: 1.5rem; }
+    .entries-btn { background-color: #a000ff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 0 10px #a000ff; }
+
+    .carousel-wrapper { display: flex; justify-content: center; align-items: center; min-height: 90vh; position: relative; }
+
+    .card {
+      width: 90%;
+      max-width: 600px;
+      background-color: #1010ff;
+      border-radius: 20px;
+      padding: 2rem;
+      min-height: 300px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
+      transition: all 0.5s ease;
+      opacity: 0;
+      transform: scale(0.9);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      pointer-events: none;
+    }
+
+    .card.active {
+      background-color: #8000ff;
+      box-shadow: 0 0 25px #8e2eff, 0 0 60px #8e2eff;
+      transform: translate(-50%, -50%) scale(1.05);
+      opacity: 1;
+      pointer-events: auto;
+      z-index: 1;
+    }
+
+    .card p { text-align: center; line-height: 1.5; font-size: 1.1rem; }
+
+    .card textarea {
+      width: 100%;
+      min-height: 120px;
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      border: none;
+      font-size: 1rem;
+      resize: vertical;
+    }
+
+    .card button {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background-color: #00e6e6;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: black;
+      font-weight: bold;
+    }
+
+    #entriesModal {
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh; width: 100vw;
+      background: rgba(0,0,0,0.85);
+      display: none; justify-content: center; align-items: center; flex-direction: column;
+      z-index: 10;
+    }
+
+    #entriesList {
+      background: white; color: black;
+      padding: 2rem; border-radius: 10px;
+      max-height: 80vh; overflow-y: auto;
+      width: 90%; max-width: 600px;
+    }
+
+    #entriesModal button {
+      margin: 0.5rem; padding: 0.5rem 1rem;
+      background-color: #a000ff; border: none; color: white; font-weight: bold;
+      border-radius: 8px; cursor: pointer;
+      box-shadow: 0 0 10px #a000ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <h1>Sentence Completion Exercise</h1>
+    <button class="entries-btn" onclick="showModal()">My Entries</button>
+  </div>
+
+  <div class="carousel-wrapper">
+    <div class="carousel" id="carousel"></div>
+  </div>
+
+  <div id="entriesModal">
+    <div id="entriesList"></div>
+    <button onclick="downloadPDF()">Download PDF</button>
+    <button onclick="document.getElementById('entriesModal').style.display='none'">Close</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const prompts = [
+  "I feel happiest when...", "I get upset when...", "I am proud of...", "I am afraid of...", "I want to learn...", 
+  "I wish I could...", "I regret not...", "I love spending time...", "I dislike when people...", "I hope someday to...", 
+
+  "I admire people who...", "I get strength from...", "I feel weak when...", "I lose interest in...", "I get motivated by...", 
+  "I am grateful for...", "I usually avoid...", "I believe success is...", "I believe failure means...", "I believe happiness is...", 
+
+  "I trust people who...", "I find peace in...", "I feel stressed when...", "I relax by...", "I get distracted by...", 
+  "I struggle with...", "I grow when...", "I stop trying when...", "I feel confident when...", "I feel insecure about...", 
+
+  "I feel safe when...", "I feel unsafe when...", "I act quickly when...", "I hesitate when...", "I make decisions by...", 
+  "I dream about...", "I care deeply about...", "I sometimes hide...", "I forgive when...", "I can’t forget...", 
+
+  "I often question...", "I get curious about...", "I find joy in...", "I feel sad about...", "I celebrate when...", 
+  "I feel angry when...", "I laugh when...", "I cry when...", "I learn best by...", "I fail when...", 
+
+  "I succeed when...", "I believe love is...", "I believe trust means...", "I believe honesty is...", "I change when...", 
+  "I avoid talking about...", "I usually hide...", "I remember clearly...", "I forget easily...", "I prepare by...", 
+
+  "I plan to...", "I avoid thinking about...", "I focus on...", "I am inspired by...", "I am bored when...", 
+  "I am patient when...", "I am impatient when...", "I feel valued when...", "I feel ignored when...", "I feel powerless when...", 
+
+  "I feel strong when...", "I feel weak when...", "I start my day by...", "I end my day by...", "I believe life is...", 
+  "I believe people are...", "I believe change is...", "I believe the world...", "I often wonder why...", "I am happiest when...", 
+
+  "I am loneliest when...", "I am excited by...", "I am nervous about...", "I am confident that...", "I am insecure when...", 
+  "I am grateful that...", "I am curious about...", "I am worried about...", "I am hopeful about...", "I usually start with...", 
+
+  "I usually end with...", "I keep going when...", "I stop moving when...", "I build strength by...", "I recover after...", 
+  "I resist when...", "I accept when...", "I discover that...", "I value most...", "I question why..."
+];
+
+    const responses = [];
+    const carousel = document.getElementById("carousel");
+    let currentIndex = 0;
+
+    // Create cards
+    prompts.forEach((promptText, i) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <p><strong>${promptText}</strong></p>
+        <textarea id="response-${i}" aria-label="Response"></textarea>
+        <button onclick="nextCard(${i}, '${encodeURIComponent(promptText)}')">Next</button>
+      `;
+      carousel.appendChild(card);
+    });
+
+    const cards = document.querySelectorAll(".card");
+    cards[0].classList.add("active"); // show first card
+
+    function nextCard(index, encodedPrompt) {
+      const prompt = decodeURIComponent(encodedPrompt);
+      const res = document.getElementById(`response-${index}`).value;
+      if (res.trim()) responses.push({ prompt, answer: res });
+
+      cards[index].classList.remove("active");
+      currentIndex = index + 1;
+      if (cards[currentIndex]) {
+        cards[currentIndex].classList.add("active");
+      } else {
+        showModal();
+      }
+    }
+
+    function showModal() {
+      const list = document.getElementById("entriesList");
+      list.innerHTML = "";
+      responses.forEach((entry) => {
+        const p = document.createElement("p");
+        p.innerHTML = `<strong>${entry.prompt}</strong><br>${entry.answer}<br><br>`;
+        list.appendChild(p);
+      });
+      if (responses.length === 0) list.innerHTML = "<p>No entries yet.</p>";
+      document.getElementById("entriesModal").style.display = "flex";
+    }
+
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("Reflection Entries", 10, 15);
+
+      let y = 30;
+      responses.forEach((entry) => {
+        doc.setFont(undefined, "bold");
+        doc.text(entry.prompt, 10, y);
+        y += 8;
+        doc.setFont(undefined, "normal");
+        const lines = doc.splitTextToSize(entry.answer, 180);
+        doc.text(lines, 10, y);
+        y += lines.length * 8 + 5;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+
+      if (responses.length === 0) doc.text("No entries.", 10, 40);
+      doc.save("reflections.pdf");
+    }
+  </script>
+<footer style="width:100%; text-align:center; padding:1rem 0; background:#1a1a1a; color:#a000ff; font-size:1rem; position:fixed; bottom:0; left:0;">
+    2025 &copy; Surbhi Sharma @surbhipsychtutor
+  </footer>
+</body>
+</html>
